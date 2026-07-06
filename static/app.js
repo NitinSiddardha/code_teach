@@ -105,10 +105,14 @@ async function populateAssessment() {
   container.innerHTML = '';
 
   try {
+    // Build conversation context from displayed messages to bias the quiz
+    const convoNodes = Array.from(document.querySelectorAll('.message .message-content')) || [];
+    const conversation = convoNodes.map(n => n.textContent.trim()).join('\n');
+
     const resp = await fetch('/api/session/assessment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: state.topic, level: state.level, conversation: '' })
+      body: JSON.stringify({ topic: state.topic, level: state.level || 'beginner', conversation: conversation })
     });
     const data = await resp.json();
     const questions = (data && data.questions) || [];
