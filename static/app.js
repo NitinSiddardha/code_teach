@@ -116,9 +116,13 @@ async function populateAssessment() {
     });
     const data = await resp.json();
     const questions = (data && data.questions) || [];
-    state.assessment = questions;
+    state.assessment = questions.map((q) => ({
+      ...q,
+      selected_option: null,
+      correct_option: q.correct_option ?? null,
+    }));
 
-    questions.forEach((q, idx) => {
+    state.assessment.forEach((q, idx) => {
       const questionEl = document.createElement('div');
       questionEl.className = 'assessment-question';
       questionEl.innerHTML = `
@@ -137,9 +141,14 @@ async function populateAssessment() {
     // Add event listeners to assessment options
     container.querySelectorAll('.assessment-option').forEach(btn => {
       btn.addEventListener('click', () => {
+        const questionIndex = Number(btn.dataset.question);
+        const optionIndex = Number(btn.dataset.option);
         const parent = btn.parentElement;
         parent.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        if (state.assessment[questionIndex]) {
+          state.assessment[questionIndex].selected_option = optionIndex;
+        }
       });
     });
   } catch (err) {

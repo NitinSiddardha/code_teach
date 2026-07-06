@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+*.code-workspace
+
+# Database files
+*.db
+*.sqlite3
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.Python
+
+# OS files
+.DS_Store
+Thumbs.db

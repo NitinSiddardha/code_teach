@@ -102,7 +102,8 @@ def plan_lesson(state: TeachState) -> dict:
     Runs ONCE at session start.
     """
     try:
-        plan = run_planner(state["topic"], state["level"])
+        profile_data = state["profile"].model_dump() if state.get("profile") else None
+        plan = run_planner(state["topic"], state["level"], student_profile=profile_data)
     except Exception:
         plan = build_fallback_plan(state["topic"], state["level"])
     return {"lesson_plan": plan}

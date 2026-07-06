@@ -66,7 +66,7 @@ class TeachState(TypedDict):
     level_suggestion:    Optional[str]
 
 
-def initial_state(topic: str, level: str) -> TeachState:
+def initial_state(topic: str, level: str, profile: StudentProfile | None = None) -> TeachState:
     """
     Returns the starting state for a new session.
     """
@@ -77,7 +77,7 @@ def initial_state(topic: str, level: str) -> TeachState:
         current_module_idx=0,
         current_task_idx=0,
         task_count=0,
-        profile=StudentProfile(declared_level=level, inferred_level=level),
+        profile=profile or StudentProfile(declared_level=level, inferred_level=level),
         conversation_history=[],
         student_code=None,
         student_signal=None,

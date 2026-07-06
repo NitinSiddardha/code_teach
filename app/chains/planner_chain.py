@@ -31,9 +31,17 @@ Docs to read:
   https://python.langchain.com/docs/concepts/runnables
 """
 
+import json
+
 from app.models.llm import smart_llm
 from app.prompts.templates import PLANNER_PROMPT
-from app.prompts.parsers import LessonPlan, lesson_plan_parser, assessment_parser
+from app.prompts.parsers import (
+    LessonPlan,
+    lesson_plan_parser,
+    assessment_parser,
+    StudentProfile,
+    AssessmentQuiz,
+)
 from app.prompts.templates import ASSESSMENT_PROMPT
 from app.retrieval.vector_store import load_lesson_store
 
@@ -45,12 +53,13 @@ def build_planner_chain():
     return PLANNER_PROMPT | smart_llm | lesson_plan_parser
 
 
-def run_planner(topic: str, level: str, previous_session=None) -> LessonPlan:
+def run_planner(topic: str, level: str, previous_session=None, student_profile: dict | None = None) -> LessonPlan:
     """
     Runs the planner chain to generate a lesson plan.
     Called once at the start of each session.
     """
     material = get_material_summary() or "No material uploaded"
+    profile_text = json.dumps(student_profile or {})
     
     chain = build_planner_chain()
     plan = chain.invoke({
@@ -58,6 +67,7 @@ def run_planner(topic: str, level: str, previous_session=None) -> LessonPlan:
         "level": level,
         "material": material,
         "previous_session": str(previous_session) if previous_session else "First session",
+        "student_profile": profile_text,
         "format_instructions": lesson_plan_parser.get_format_instructions()
     })
     return plan
@@ -120,6 +130,52 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
                                 options=["list/array", "single", "boolean"], difficulty="easy")
         quiz = AssessmentQuiz(topic=topic, level=level, questions=[q1, q2, q3])
         return quiz
+
+
+def score_assessment(quiz_data) -> StudentProfile:
+    """
+    Convert assessment answers into an initial StudentProfile.
+    """
+    quiz = None
+    if isinstance(quiz_data, dict):
+        try:
+            quiz = AssessmentQuiz.model_validate(quiz_data)
+        except Exception:
+            quiz = None
+    elif isinstance(quiz_data, AssessmentQuiz):
+        quiz = quiz_data
+
+    if not quiz:
+        return StudentProfile(declared_level="beginner", inferred_level="beginner")
+
+    total = len(quiz.questions)
+    correct = 0
+    for question in quiz.questions:
+        if question.correct_option is not None and question.selected_option is not None:
+            if question.selected_option == question.correct_option:
+                correct += 1
+
+    score = 0.5
+    if total > 0:
+        score = 0.3 + 0.7 * (correct / total)
+
+    concept_scores = {quiz.topic: round(score, 2)}
+    confidence_streak = correct
+    struggle_streak = total - correct
+
+    profile = StudentProfile(
+        declared_level=quiz.level,
+        inferred_level=quiz.level,
+        concept_scores=concept_scores,
+        avg_attempts=1.0 if total > 0 else 0.0,
+        total_tasks=total,
+        total_attempts=total,
+        struggle_streak=struggle_streak,
+        confidence_streak=confidence_streak,
+    )
+    profile.weak_concepts = [k for k, v in profile.concept_scores.items() if v <= 0.4]
+    profile.strong_concepts = [k for k, v in profile.concept_scores.items() if v >= 0.8]
+    return profile
 
 
 def get_material_summary() -> str:

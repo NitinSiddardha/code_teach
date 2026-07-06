@@ -24,78 +24,50 @@ Docs to read:
 """
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP
-
-# ── TODO: Import loaders ──────────────────────────────────────────────────────
-# from langchain_community.document_loaders import PyPDFLoader
-# from langchain_community.document_loaders import WebBaseLoader
-# from langchain_community.document_loaders import TextLoader
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
+from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
-# ── TODO: Create the text splitter ───────────────────────────────────────────
-# Use RecursiveCharacterTextSplitter with CHUNK_SIZE and CHUNK_OVERLAP from config
-# This splitter tries to split on paragraphs first, then sentences, then words.
-# It's the right default for most text.
-#
-# text_splitter = RecursiveCharacterTextSplitter(
-#     chunk_size=CHUNK_SIZE,
-#     chunk_overlap=CHUNK_OVERLAP
-# )
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=CHUNK_SIZE,
+    chunk_overlap=CHUNK_OVERLAP
+)
 
 
 def load_pdf(file_path: str):
     """
     Load a PDF and split it into chunks.
-    
-    TODO:
-    1. Use PyPDFLoader(file_path) to load the PDF
-    2. Call .load() to get a list of Document objects (one per page)
-    3. Call text_splitter.split_documents(docs) to chunk them
-    4. Return the list of chunks
-    
-    Each Document has:
-      .page_content : str  — the text
-      .metadata     : dict — {"source": "file.pdf", "page": 0}
     """
-    pass
+    loader = PyPDFLoader(file_path)
+    docs = loader.load()
+    return text_splitter.split_documents(docs)
 
 
 def load_url(url: str):
     """
     Load a webpage and split into chunks.
-    
-    TODO:
-    1. Use WebBaseLoader([url]) to fetch the page
-    2. .load() → list of Documents
-    3. Split and return
-    
-    Good for: tutorial pages, documentation, Stack Overflow answers
     """
-    pass
+    loader = WebBaseLoader(url)
+    docs = loader.load()
+    return text_splitter.split_documents(docs)
 
 
 def load_text(text: str, source_name: str = "pasted_notes"):
     """
     Load plain text pasted directly by the student.
-    
-    TODO:
-    1. Create a Document manually:
-       from langchain_core.documents import Document
-       doc = Document(page_content=text, metadata={"source": source_name})
-    2. Split and return
     """
-    pass
+    doc = Document(page_content=text, metadata={"source": source_name})
+    return text_splitter.split_documents([doc])
 
 
 def load_material(source: str, source_type: str = "auto"):
     """
     Smart loader — detects type and routes to the right loader.
-    
-    TODO:
-    - if source_type == "pdf"  or source ends with .pdf → load_pdf()
-    - if source_type == "url"  or source starts with http → load_url()
-    - else → load_text()
-    
-    This is the only function the rest of the app calls.
     """
-    pass
+    normalized = source.strip()
+    if source_type == "pdf" or normalized.lower().endswith(".pdf"):
+        return load_pdf(normalized)
+    if source_type == "url" or normalized.lower().startswith("http"):
+        return load_url(normalized)
+    return load_text(source, source_name=source_type or "pasted_notes")

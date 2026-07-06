@@ -19,8 +19,9 @@ def create_app():
         payload = request.get_json(silent=True) or {}
         topic = payload.get("topic", "Python Variables")
         level = payload.get("level", "beginner")
+        assessment = payload.get("assessment")
         try:
-            response = start_session(topic, level)
+            response = start_session(topic, level, assessment)
         except Exception as exc:
             return jsonify({"error": str(exc), "message": "Session start failed."}), 500
         return jsonify(response.model_dump() if hasattr(response, "model_dump") else response)

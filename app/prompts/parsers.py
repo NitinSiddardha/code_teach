@@ -145,12 +145,22 @@ class AssessmentQuestion(BaseModel):
     question: str
     options: List[str]
     difficulty: Optional[Literal["easy", "medium", "hard"]] = "medium"
+    correct_option: Optional[int] = Field(default=None, description="Hidden index of the correct answer")
+    selected_option: Optional[int] = Field(default=None, description="Student-selected option index")
+
+    model_config = {
+        "extra": "ignore"
+    }
 
 
 class AssessmentQuiz(BaseModel):
     topic: str
     level: str
     questions: List[AssessmentQuestion]
+
+    model_config = {
+        "extra": "ignore"
+    }
 
 
 assessment_parser = PydanticOutputParser(pydantic_object=AssessmentQuiz)

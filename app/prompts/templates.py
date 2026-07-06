@@ -95,8 +95,10 @@ Rules:
 {format_instructions}"""),
     ("human", """Topic: {topic}
 Level: {level}
+Student Profile: {student_profile}
 
-Create a lesson plan covering the fundamentals of {topic} at {level} level.""")
+Create a lesson plan covering the fundamentals of {topic} at {level} level.
+If a profile is provided, prioritize weaker concepts and avoid repeating already-mastered material.""")
 ])
 
 
@@ -137,19 +139,19 @@ Respond to this signal.""")
 # Generates a short diagnostic quiz tailored to topic, level and recent conversation.
 ASSESSMENT_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """You are a concise quiz generator. Produce 3-5 multiple-choice questions
-tailored to the given Topic and Level. Keep questions short and include 3-4 plausible options.
+    tailored to the given Topic and Level. Keep questions short and include 3-4 plausible options.
 
-Rules:
-1. Return JSON matching the provided format_instructions.
-2. Difficulty should match level (beginner=easy, intermediate=medium, advanced=hard).
-3. Use recent conversation context to bias questions toward observed gaps.
-4. Do NOT include correct answers in the output.
+    Rules:
+    1. Return JSON matching the provided format_instructions.
+    2. Difficulty should match level (beginner=easy, intermediate=medium, advanced=hard).
+    3. Use recent conversation context to bias questions toward observed gaps.
+    4. Include a hidden index field correct_option for each question.
+    5. Do NOT reveal the correct_option to the student in the UI.
 
-{format_instructions}"""),
+    {format_instructions}"""),
     ("human", """Topic: {topic}
 Level: {level}
 Conversation context: {conversation}
 
 Produce a quiz for this student.""")
 ])
-
