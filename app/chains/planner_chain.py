@@ -68,10 +68,23 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
     Generates a short diagnostic quiz tailored to topic/level and conversation context.
     Returns an AssessmentQuiz Pydantic object.
     """
+    # Normalize topic for clarity (e.g., handle c++ / cpp variants)
+    t_raw = (topic or "").strip()
+    t_low = t_raw.lower()
+    if "c++" in t_low or "cpp" in t_low:
+        topic_clean = "C++ Variables" if "variable" in t_low else "C++"
+    elif "java" in t_low:
+        topic_clean = "Java " + ("Variables" if "variable" in t_low else "Basics")
+    elif "python" in t_low:
+        topic_clean = "Python " + ("Variables" if "variable" in t_low else "Basics")
+    else:
+        # Capitalize each word as a safe default
+        topic_clean = " ".join([w.capitalize() for w in t_raw.split()]) or topic
+
     try:
         chain = ASSESSMENT_PROMPT | smart_llm | assessment_parser
         quiz = chain.invoke({
-            "topic": topic,
+            "topic": topic_clean,
             "level": level,
             "conversation": conversation or "",
             "format_instructions": assessment_parser.get_format_instructions()
