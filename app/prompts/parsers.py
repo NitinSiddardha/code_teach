@@ -140,3 +140,18 @@ teacher_response_parser = PydanticOutputParser(pydantic_object=TeacherResponse)
 lesson_plan_parser      = PydanticOutputParser(pydantic_object=LessonPlan)
 session_summary_parser  = PydanticOutputParser(pydantic_object=SessionSummary)
 
+# ── Assessment Models ───────────────────────────────────────────────────────
+class AssessmentQuestion(BaseModel):
+    question: str
+    options: List[str]
+    difficulty: Optional[Literal["easy", "medium", "hard"]] = "medium"
+
+
+class AssessmentQuiz(BaseModel):
+    topic: str
+    level: str
+    questions: List[AssessmentQuestion]
+
+
+assessment_parser = PydanticOutputParser(pydantic_object=AssessmentQuiz)
+

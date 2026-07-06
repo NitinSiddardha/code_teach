@@ -99,29 +99,33 @@ def run_code_snippet(code: str, language: str = "python") -> str:
     This avoids running arbitrary student code directly on the server.
     """
     # Accept common languages; extendable
-    if language not in {"python", "java", "cpp"}:
+    supported = {"python", "java", "cpp", "c", "javascript", "typescript", "go", "ruby", "php", "csharp"}
+    if language not in supported:
         return "Language not supported yet."
 
     try:
         # Map to piston-supported filenames and versions
+        # Map to piston-supported filenames and versions
         if language == "python":
-            payload = {
-                "language": "python",
-                "version": "3.10.0",
-                "files": [{"name": "main.py", "content": code}],
-            }
+            payload = {"language": "python", "version": "3.10.0", "files": [{"name": "main.py", "content": code}]}
         elif language == "java":
-            payload = {
-                "language": "java",
-                "version": "17.0.9",
-                "files": [{"name": "Main.java", "content": code}],
-            }
-        elif language == "cpp":
-            payload = {
-                "language": "cpp",
-                "version": "17.0.0",
-                "files": [{"name": "main.cpp", "content": code}],
-            }
+            payload = {"language": "java", "version": "17.0.9", "files": [{"name": "Main.java", "content": code}]}
+        elif language in {"cpp", "c++"}:
+            payload = {"language": "cpp", "version": "17.0.0", "files": [{"name": "main.cpp", "content": code}]}
+        elif language == "c":
+            payload = {"language": "c", "version": "11.0.0", "files": [{"name": "main.c", "content": code}]}
+        elif language in {"javascript", "js"}:
+            payload = {"language": "javascript", "version": "node-18.12.1", "files": [{"name": "index.js", "content": code}]}
+        elif language in {"typescript", "ts"}:
+            payload = {"language": "typescript", "version": "4.9.4", "files": [{"name": "index.ts", "content": code}]}
+        elif language == "go":
+            payload = {"language": "go", "version": "1.20", "files": [{"name": "main.go", "content": code}]}
+        elif language == "ruby":
+            payload = {"language": "ruby", "version": "3.2.2", "files": [{"name": "main.rb", "content": code}]}
+        elif language == "php":
+            payload = {"language": "php", "version": "8.1", "files": [{"name": "index.php", "content": code}]}
+        elif language == "csharp":
+            payload = {"language": "csharp", "version": "7.0", "files": [{"name": "Program.cs", "content": code}]}
         response = requests.post("https://emkc.org/api/v2/piston/execute", json=payload, timeout=15)
         response.raise_for_status()
         data = response.json()

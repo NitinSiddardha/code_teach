@@ -96,40 +96,53 @@ document.getElementById('btn-next-assessment').addEventListener('click', () => {
     alert('Please select both a topic and a level.');
     return;
   }
-  populateAssessment();
-  showScreen('assessment');
+  populateAssessment().then(() => showScreen('assessment'));
 });
 
 // Assessment Population
-function populateAssessment() {
+async function populateAssessment() {
   const container = document.getElementById('assessment-questions');
   container.innerHTML = '';
-  
-  const questions = assessmentQuestions[state.topic] || [];
-  questions.forEach((q, idx) => {
-    const questionEl = document.createElement('div');
-    questionEl.className = 'assessment-question';
-    questionEl.innerHTML = `
-      <p><strong>Q${idx + 1}:</strong> ${q.question}</p>
-      <div class="assessment-options">
-        ${q.options.map((opt, optIdx) => `
-          <button class="assessment-option" data-question="${idx}" data-option="${optIdx}">
-            ${opt}
-          </button>
-        `).join('')}
-      </div>
-    `;
-    container.appendChild(questionEl);
-  });
 
-  // Add event listeners to assessment options
-  document.querySelectorAll('.assessment-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const parent = btn.parentElement;
-      parent.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
+  try {
+    const resp = await fetch('/api/session/assessment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: state.topic, level: state.level, conversation: '' })
     });
-  });
+    const data = await resp.json();
+    const questions = (data && data.questions) || [];
+    state.assessment = questions;
+
+    questions.forEach((q, idx) => {
+      const questionEl = document.createElement('div');
+      questionEl.className = 'assessment-question';
+      questionEl.innerHTML = `
+        <p><strong>Q${idx + 1}:</strong> ${q.question}</p>
+        <div class="assessment-options">
+          ${q.options.map((opt, optIdx) => `
+            <button class="assessment-option" data-question="${idx}" data-option="${optIdx}">
+              ${opt}
+            </button>
+          `).join('')}
+        </div>
+      `;
+      container.appendChild(questionEl);
+    });
+
+    // Add event listeners to assessment options
+    container.querySelectorAll('.assessment-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const parent = btn.parentElement;
+        parent.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+  } catch (err) {
+    console.error('Assessment fetch failed', err);
+    // Fallback to a simple question
+    container.innerHTML = '<div class="assessment-question"><p>No assessment available — press Start to continue.</p></div>';
+  }
 }
 
 // Event Listeners - Assessment

@@ -25,6 +25,19 @@ def create_app():
             return jsonify({"error": str(exc), "message": "Session start failed."}), 500
         return jsonify(response.model_dump() if hasattr(response, "model_dump") else response)
 
+    @app.post("/api/session/assessment")
+    def session_assessment():
+        payload = request.get_json(silent=True) or {}
+        topic = payload.get("topic", "Python Variables")
+        level = payload.get("level", "beginner")
+        conversation = payload.get("conversation", "")
+        try:
+            from app.chains.planner_chain import run_assessment
+            quiz = run_assessment(topic, level, conversation)
+        except Exception as exc:
+            return jsonify({"error": str(exc), "message": "Assessment generation failed."}), 500
+        return jsonify(quiz.model_dump() if hasattr(quiz, "model_dump") else quiz)
+
     @app.post("/api/session/submit")
     def session_submit():
         payload = request.get_json(silent=True) or {}

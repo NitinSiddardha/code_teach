@@ -33,7 +33,8 @@ Docs to read:
 
 from app.models.llm import smart_llm
 from app.prompts.templates import PLANNER_PROMPT
-from app.prompts.parsers import LessonPlan, lesson_plan_parser
+from app.prompts.parsers import LessonPlan, lesson_plan_parser, assessment_parser
+from app.prompts.templates import ASSESSMENT_PROMPT
 from app.retrieval.vector_store import load_lesson_store
 
 
@@ -60,6 +61,21 @@ def run_planner(topic: str, level: str, previous_session=None) -> LessonPlan:
         "format_instructions": lesson_plan_parser.get_format_instructions()
     })
     return plan
+
+
+def run_assessment(topic: str, level: str, conversation: str = ""):
+    """
+    Generates a short diagnostic quiz tailored to topic/level and conversation context.
+    Returns an AssessmentQuiz Pydantic object.
+    """
+    chain = ASSESSMENT_PROMPT | smart_llm | assessment_parser
+    quiz = chain.invoke({
+        "topic": topic,
+        "level": level,
+        "conversation": conversation or "",
+        "format_instructions": assessment_parser.get_format_instructions()
+    })
+    return quiz
 
 
 def get_material_summary() -> str:
