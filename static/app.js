@@ -160,14 +160,19 @@ async function initializeSession() {
     state.taskCount = 1;
     
     // Update session header
-    document.getElementById('topic-tag').textContent = state.topic;
+    const displayTopic = (state.topic || '').trim();
+    document.getElementById('topic-tag').textContent = displayTopic;
     document.getElementById('level-tag').textContent = state.level.charAt(0).toUpperCase() + state.level.slice(1);
     document.getElementById('task-counter').textContent = `Task ${state.taskCount} of ${state.totalTasks}`;
     
     // Set topic explanation
-    state.topicExplanation = topicExplanations[state.topic] || 'Learn this topic by completing tasks.';
+    if (topicExplanations[displayTopic]) {
+      state.topicExplanation = topicExplanations[displayTopic];
+    } else {
+      state.topicExplanation = `I'll create a short learning path and practice tasks for "${displayTopic}" to get you started.`;
+    }
     document.getElementById('topic-explanation').innerHTML = `
-      <h3>${state.topic}</h3>
+      <h3>${displayTopic}</h3>
       <p>${state.topicExplanation}</p>
     `;
     

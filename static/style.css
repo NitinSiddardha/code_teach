@@ -120,6 +120,37 @@ html, body {
   border-color: var(--primary);
 }
 
+.form-group input[type="text"],
+.topic-input {
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-light);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.form-group input[type="text"]::placeholder,
+.topic-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-group input[type="text"]:focus,
+.topic-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(47, 111, 237, 0.05);
+}
+
+.form-hint {
+  margin: 8px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* Level Selector */
 .level-selector {
   display: grid;
@@ -312,9 +343,42 @@ html, body {
 /* Session Content */
 .session-content {
   padding: 24px;
-  max-width: 900px;
-  margin: 0 auto;
   width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.session-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  gap: 16px;
+  height: 100%;
+}
+
+/* Sidebars */
+.sidebar-left,
+.sidebar-right {
+  overflow-y: auto;
+  border: 1px solid var(--surface-light);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 16px;
+}
+
+.sidebar-left {
+  background: rgba(47, 111, 237, 0.05);
+}
+
+.sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Chat Column */
+.chat-column {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Topic Explanation */
@@ -323,93 +387,143 @@ html, body {
   border: 1px solid var(--primary);
   border-radius: var(--radius);
   padding: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .explanation-box h3 {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   color: var(--primary-light);
+  font-size: 1.1rem;
 }
 
 .explanation-box p {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text);
   line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 /* Messages */
 .messages {
-  margin-bottom: 24px;
-  max-height: 400px;
+  flex: 1;
   overflow-y: auto;
   border: 1px solid var(--surface-light);
   border-radius: var(--radius);
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
-}
+  padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--surface-light);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
 
-.message {
-  margin-bottom: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--surface);
-  border-left: 4px solid var(--surface-light);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  line-height: 1.5;
-}
+  .message {
+    margin-bottom: 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--surface-light);
+    word-wrap: break-word;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    max-width: 78%;
+  }
 
-.message.teacher {
-  border-left-color: var(--primary-light);
-  background: rgba(86, 180, 255, 0.08);
-}
+  .message.teacher {
+    border-left-color: var(--primary-light);
+    background: rgba(86, 180, 255, 0.08);
+    margin-right: 0;
+    align-self: flex-start;
+  }
 
-.message.teacher .message-label {
-  color: var(--primary-light);
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
-}
+  .message.teacher .message-label {
+    color: var(--primary-light);
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-.message.student {
-  border-left-color: var(--success);
-  background: rgba(110, 231, 183, 0.08);
-  margin-left: 40px;
-}
+  .message.teacher .message-content {
+    color: var(--text);
+    white-space: pre-wrap;
+  }
 
-.message.student .message-label {
-  color: var(--success);
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
-}
+  .message.student {
+    border-left-color: var(--success);
+    background: rgba(110, 231, 183, 0.08);
+    margin-left: auto;
+    max-width: 85%;
+    align-self: flex-end;
+  }
 
-.message-content {
-  color: var(--text);
-}
+  .message.student .message-label {
+    color: var(--success);
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-/* Editor Section */
-.editor-section {
-  margin-bottom: 24px;
+  .message.student .message-content {
+    color: var(--success);
+    white-space: pre-wrap;
+    font-family: "Fira Code", monospace;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .message-content {
+    color: var(--text);
+  }
+
+  /* Code / inline block styling inside messages */
+  .message .message-content pre,
+  .message .message-content code {
+    font-family: "Fira Code", "Menlo", "Monaco", monospace;
+    background: rgba(0,0,0,0.25);
+    padding: 8px 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+    display: block;
+    white-space: pre-wrap;
+    margin: 6px 0 0 0;
+    font-size: 0.92rem;
+  }
+
+  .message.teacher .message-content pre,
+  .message.teacher .message-content code {
+    background: rgba(86, 180, 255, 0.06);
+  gap: 8px;
 }
 
 .editor-section label {
   display: block;
-  margin-bottom: 8px;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .code-editor {
   width: 100%;
-  min-height: 200px;
+  min-height: 250px;
   padding: 12px;
   background: var(--bg-darker);
   border: 1px solid var(--surface-light);
   border-radius: var(--radius);
   color: var(--text);
   font-family: "Fira Code", "Monaco", monospace;
-  font-size: 0.95rem;
-  resize: vertical;
+  font-size: 0.85rem;
+  resize: none;
   overflow: auto;
 }
 
@@ -421,38 +535,40 @@ html, body {
 
 /* Signals Section */
 .signals-section {
-  margin-top: 24px;
-  padding: 16px;
-  background: var(--surface);
-  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .signals-label {
-  margin: 0 0 12px 0;
+  margin: 0;
   font-weight: 500;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 
 .signal-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 .signal-btn {
-  padding: 10px 12px;
+  padding: 10px;
   background: transparent;
   border: 1px solid var(--surface-light);
   border-radius: 8px;
   color: var(--text);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   transition: all 0.2s;
 }
 
 .signal-btn:hover {
   border-color: var(--warning);
   background: rgba(251, 191, 36, 0.1);
+  color: var(--warning);
 }
 
 .signal-btn:active {
@@ -523,6 +639,31 @@ html, body {
 
   .code-editor {
     min-height: 150px;
+  }
+}
+
+/* Medium screens: slightly narrower sidebars */
+@media (max-width: 1200px) {
+  .session-layout {
+    grid-template-columns: 220px 1fr 260px;
+  }
+}
+
+/* Small screens: stack into a single column for better readability */
+@media (max-width: 900px) {
+  .session-layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar-left,
+  .sidebar-right {
+    order: 2;
+    width: 100%;
+  }
+  .chat-column {
+    order: 1;
+  }
+  .messages {
+    max-height: 50vh;
   }
 }
 

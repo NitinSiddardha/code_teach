@@ -193,7 +193,17 @@ def evaluate_code(state: TeachState) -> dict:
         )
     
     updated_profile = state["profile"]
-    is_correct = (response.mode == "correct")
+    # Determine correctness from the execution_result when possible.
+    try:
+        exec_text = str(execution_result or "").lower()
+    except Exception:
+        exec_text = ""
+
+    error_indicators = ["error:\n", "could not run code", "traceback", "exception", "execution failed"]
+    has_error = any(ind in exec_text for ind in error_indicators)
+
+    # If execution produced no error we consider it correct, otherwise fall back to LLM judgment.
+    is_correct = (not has_error) or (response.mode == "correct")
     updated_profile.update_after_task(concept, is_correct)
     
     return {
