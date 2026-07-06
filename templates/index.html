@@ -25,17 +25,9 @@
           <h2>What do you want to learn?</h2>
           
           <div class="form-group">
-            <label for="topic">Choose a topic:</label>
-            <select id="topic">
-              <option value="">-- Select a topic --</option>
-              <option value="Python Variables">Python Variables</option>
-              <option value="Python Functions">Python Functions</option>
-              <option value="Python Loops">Python Loops</option>
-              <option value="Python Dictionaries">Python Dictionaries</option>
-              <option value="Python Lists">Python Lists</option>
-              <option value="Java Variables">Java Variables</option>
-              <option value="Java Functions">Java Functions</option>
-            </select>
+            <label for="topic">Enter a coding topic:</label>
+            <input type="text" id="topic" placeholder="e.g., Python Functions, Java Loops, C++ Variables" class="topic-input">
+            <p class="form-hint">Any programming concept or language topic</p>
           </div>
 
           <div class="form-group">
@@ -94,29 +86,36 @@
         </div>
 
         <div class="session-content">
-          <!-- Topic explanation -->
-          <div id="topic-explanation" class="explanation-box">
-            <!-- Populated with topic context -->
-          </div>
+          <div class="session-layout">
+            <!-- Left Sidebar: Topic & Context -->
+            <div class="sidebar-left">
+              <div id="topic-explanation" class="explanation-box">
+                <!-- Populated with topic context -->
+              </div>
+            </div>
 
-          <!-- Messages -->
-          <div id="messages" class="messages"></div>
+            <!-- Middle: Chat Messages -->
+            <div class="chat-column">
+              <div id="messages" class="messages"></div>
+            </div>
 
-          <!-- Code editor -->
-          <div class="editor-section">
-            <label>Your solution:</label>
-            <textarea id="code" class="code-editor" spellcheck="false" placeholder="Write your code here..."></textarea>
-            <button id="submit-btn" class="btn btn-primary btn-block">Submit Code</button>
-          </div>
+            <!-- Right Sidebar: Code Editor & Actions -->
+            <div class="sidebar-right">
+              <div class="editor-section">
+                <label>Your solution:</label>
+                <textarea id="code" class="code-editor" spellcheck="false" placeholder="Write your code here..."></textarea>
+                <button id="submit-btn" class="btn btn-primary btn-block">Submit</button>
+              </div>
 
-          <!-- Signals -->
-          <div class="signals-section">
-            <p class="signals-label">Need help?</p>
-            <div class="signal-buttons">
-              <button class="signal-btn" data-signal="too_hard">Too Hard</button>
-              <button class="signal-btn" data-signal="too_easy">Too Easy</button>
-              <button class="signal-btn" data-signal="lost_concept">Lost</button>
-              <button class="signal-btn" data-signal="more_practice">More Practice</button>
+              <div class="signals-section">
+                <p class="signals-label">Need help?</p>
+                <div class="signal-buttons">
+                  <button class="signal-btn" data-signal="too_hard">Too Hard</button>
+                  <button class="signal-btn" data-signal="too_easy">Too Easy</button>
+                  <button class="signal-btn" data-signal="lost_concept">Lost</button>
+                  <button class="signal-btn" data-signal="more_practice">More Practice</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
