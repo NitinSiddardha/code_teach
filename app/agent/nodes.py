@@ -76,6 +76,17 @@ def build_fallback_plan(topic: str, level: str) -> LessonPlan:
     )
 
 
+def fallback_task_for_topic(topic: str) -> str:
+    topic_text = (topic or "").lower()
+    if "c++" in topic_text or "cpp" in topic_text:
+        return "Write a C++ function named square that returns the square of an integer."
+    if "java" in topic_text:
+        return "Write a Java method named square that returns the square of an integer."
+    if "python" in topic_text:
+        return "Write a Python function named square that returns the square of a number."
+    return "Write a small function that returns the square of a number."
+
+
 def build_fallback_response(state: TeachState, *, message: str, task: str | None = None, starter_code: str | None = None, concept: str | None = None) -> TeacherResponse:
     return TeacherResponse(
         mode="task",
@@ -152,7 +163,7 @@ def give_task(state: TeachState) -> dict:
         response = build_fallback_response(
             state,
             message="Let’s build something small and concrete.",
-            task="Write a function that returns the square of a number.",
+            task=fallback_task_for_topic(state["topic"]),
             concept="functions",
         )
     

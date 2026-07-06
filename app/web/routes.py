@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.agent.teacher_agent import start_session, submit_code, send_signal, end_current_session
+from app.retrieval.loader import load_material
+from app.retrieval.vector_store import create_lesson_store
 
 
 def create_app():
@@ -38,6 +40,22 @@ def create_app():
         except Exception as exc:
             return jsonify({"error": str(exc), "message": "Assessment generation failed."}), 500
         return jsonify(quiz.model_dump() if hasattr(quiz, "model_dump") else quiz)
+
+    @app.post("/api/material/upload")
+    def material_upload():
+        payload = request.get_json(silent=True) or {}
+        source = payload.get("source", "").strip()
+        source_type = payload.get("source_type", "text")
+        if not source:
+            return jsonify({"error": "No material provided.", "message": "Please paste your notes or material."}), 400
+        try:
+            documents = load_material(source, source_type)
+            if not documents:
+                raise ValueError("Unable to parse uploaded material.")
+            create_lesson_store(documents)
+        except Exception as exc:
+            return jsonify({"error": str(exc), "message": "Material upload failed."}), 500
+        return jsonify({"message": "Material uploaded successfully.", "chunks": len(documents)})
 
     @app.post("/api/session/submit")
     def session_submit():

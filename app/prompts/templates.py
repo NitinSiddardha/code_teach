@@ -145,8 +145,10 @@ ASSESSMENT_PROMPT = ChatPromptTemplate.from_messages([
     1. Return JSON matching the provided format_instructions.
     2. Difficulty should match level (beginner=easy, intermediate=medium, advanced=hard).
     3. Use recent conversation context to bias questions toward observed gaps.
-    4. Include a hidden index field correct_option for each question.
-    5. Do NOT reveal the correct_option to the student in the UI.
+    4. If Topic mentions a programming language, reference that language in every question and use examples in that language.
+    5. Stay focused on the requested concept; do not ask unrelated generic questions.
+    6. Include a hidden index field correct_option for each question.
+    7. Do NOT reveal the correct_option to the student in the UI.
 
     {format_instructions}"""),
     ("human", """Topic: {topic}

@@ -4,6 +4,9 @@ const state = {
   topic: null,
   level: null,
   assessment: [],
+  materialSource: '',
+  materialSourceType: 'text',
+  materialUploadStatus: '',
   sessionId: `session_${Date.now()}`,
   taskCount: 0,
   totalTasks: 5,
@@ -62,7 +65,9 @@ const topicExplanations = {
   'Python Dictionaries': 'Dictionaries store data as key-value pairs. They are unordered, mutable collections that allow you to quickly look up values using keys.',
   'Python Lists': 'Lists are ordered collections of items. They can contain any type of data and support indexing, slicing, and various manipulation methods.',
   'Java Variables': 'Java variables must be declared with a type (int, String, boolean, etc.) before use. This type-safety helps catch errors early.',
-  'Java Functions': 'Methods in Java are functions that belong to classes. They must specify return types and parameter types explicitly.'
+  'Java Functions': 'Methods in Java are functions that belong to classes. They must specify return types and parameter types explicitly.',
+  'C++ Variables': 'C++ variables must declare a type before use, for example int x = 5;. Statements end with a semicolon, and the language uses strong typing to help prevent errors.',
+  'C++ Functions': 'C++ functions are declared with a return type and name, and may be defined with a body inside curly braces. Example: int square(int x) { return x * x; }'
 };
 
 // Screen Navigation
@@ -91,13 +96,55 @@ document.querySelectorAll('.level-btn').forEach(btn => {
 });
 
 document.getElementById('btn-next-assessment').addEventListener('click', () => {
-  state.topic = document.getElementById('topic').value;
+  state.topic = document.getElementById('topic').value.trim();
+  state.materialSource = document.getElementById('material-source').value.trim();
+  state.materialSourceType = document.getElementById('material-source-type').value;
   if (!state.topic || !state.level) {
     alert('Please select both a topic and a level.');
     return;
   }
   populateAssessment().then(() => showScreen('assessment'));
 });
+
+document.getElementById('btn-upload-material').addEventListener('click', async () => {
+  await uploadMaterial('material-source', 'material-source-type', 'material-upload-status', 'btn-upload-material');
+});
+
+document.getElementById('btn-session-upload-material').addEventListener('click', async () => {
+  await uploadMaterial('session-material-source', undefined, 'session-material-status', 'btn-session-upload-material');
+});
+
+async function uploadMaterial(sourceId, typeId, statusId, buttonId) {
+  const source = document.getElementById(sourceId).value.trim();
+  const sourceType = typeId ? document.getElementById(typeId).value : 'text';
+  if (!source) {
+    alert('Please paste some notes or a URL to upload.');
+    return;
+  }
+  const button = document.getElementById(buttonId);
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/material/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, source_type: sourceType })
+    });
+    const data = await response.json();
+    const statusEl = document.getElementById(statusId);
+    if (response.ok) {
+      state.materialUploadStatus = `Material uploaded (${data.chunks} chunks).`;
+      if (statusEl) statusEl.textContent = state.materialUploadStatus;
+    } else {
+      state.materialUploadStatus = `Upload failed: ${data.message || data.error}`;
+      if (statusEl) statusEl.textContent = state.materialUploadStatus;
+    }
+  } catch (error) {
+    const statusEl = document.getElementById(statusId);
+    state.materialUploadStatus = 'Upload failed. Please try again.';
+    if (statusEl) statusEl.textContent = state.materialUploadStatus;
+  }
+  button.disabled = false;
+}
 
 // Assessment Population
 async function populateAssessment() {

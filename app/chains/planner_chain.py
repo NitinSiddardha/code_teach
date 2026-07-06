@@ -41,6 +41,7 @@ from app.prompts.parsers import (
     assessment_parser,
     StudentProfile,
     AssessmentQuiz,
+    AssessmentQuestion,
 )
 from app.prompts.templates import ASSESSMENT_PROMPT
 from app.retrieval.vector_store import load_lesson_store
@@ -71,6 +72,89 @@ def run_planner(topic: str, level: str, previous_session=None, student_profile: 
         "format_instructions": lesson_plan_parser.get_format_instructions()
     })
     return plan
+
+
+def build_assessment_fallback(topic_clean: str, level: str) -> AssessmentQuiz:
+    """Build a topic-aware fallback assessment when the LLM output is missing or invalid."""
+    lower = topic_clean.lower()
+    if "c++" in lower or "cpp" in lower:
+        q1 = AssessmentQuestion(
+            question="In C++, which type is best for storing whole numbers?",
+            options=["int", "string", "double", "bool"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q2 = AssessmentQuestion(
+            question="How do you declare a variable named count with value 10 in C++?",
+            options=["int count = 10;", "count := 10", "let count = 10", "count = 10"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q3 = AssessmentQuestion(
+            question="Which symbol ends a statement in C++?",
+            options=[";", ".", ",", ":"],
+            difficulty="easy",
+            correct_option=0,
+        )
+    elif "java" in lower:
+        q1 = AssessmentQuestion(
+            question="In Java, which keyword declares an integer variable?",
+            options=["int", "var", "let", "string"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q2 = AssessmentQuestion(
+            question="Which symbol ends a Java statement?",
+            options=[";", ".", ",", ":"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q3 = AssessmentQuestion(
+            question="What is the default value of an uninitialized int field in a Java class?",
+            options=["0", "null", "undefined", "1"],
+            difficulty="medium",
+            correct_option=0,
+        )
+    elif "python" in lower:
+        q1 = AssessmentQuestion(
+            question="In Python, how do you create a variable named x with value 5?",
+            options=["x = 5", "int x = 5", "let x = 5", "x := 5"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q2 = AssessmentQuestion(
+            question="Which type in Python can hold multiple values?",
+            options=["list", "int", "float", "bool"],
+            difficulty="easy",
+            correct_option=0,
+        )
+        q3 = AssessmentQuestion(
+            question="What is a variable in Python?",
+            options=["A container for storing a value", "A function", "A loop", "A comment"],
+            difficulty="easy",
+            correct_option=0,
+        )
+    else:
+        q1 = AssessmentQuestion(
+            question=f"What is most important to understand about {topic_clean}?",
+            options=["The core concept", "The weather", "The menu", "The furniture"],
+            difficulty="medium",
+            correct_option=0,
+        )
+        q2 = AssessmentQuestion(
+            question=f"Which of these is most closely related to {topic_clean}?",
+            options=["The topic itself", "A random example", "A homework assignment", "A travel plan"],
+            difficulty="medium",
+            correct_option=0,
+        )
+        q3 = AssessmentQuestion(
+            question=f"Which answer best shows understanding of {topic_clean}?",
+            options=["A correct definition", "A wrong fact", "A joke", "A song"],
+            difficulty="medium",
+            correct_option=0,
+        )
+
+    return AssessmentQuiz(topic=topic_clean, level=level, questions=[q1, q2, q3])
 
 
 def run_assessment(topic: str, level: str, conversation: str = ""):
@@ -110,26 +194,21 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
                 # Ensure difficulty is set appropriately
                 if not getattr(q, "difficulty", None):
                     q.difficulty = target_diff
+                if q.correct_option is None:
+                    q.correct_option = 0
                 # If the question mentions another language, replace it with the cleaned topic's language
                 q_text = q.question
                 if "python" in q_text.lower() and "c++" in topic_clean.lower():
                     q.question = q_text.replace("Python", "C++").replace("python", "C++")
                 if "python" in q_text.lower() and "java" in topic_clean.lower():
                     q.question = q_text.replace("Python", "Java").replace("python", "Java")
+            if not quiz.questions:
+                return build_assessment_fallback(topic_clean, level)
             return quiz
         except Exception:
             return quiz
     except Exception:
-        # Fallback simple quiz when LLM is unavailable
-        from app.prompts.parsers import AssessmentQuiz, AssessmentQuestion
-        q1 = AssessmentQuestion(question=f"What is a core idea in {topic}?",
-                                options=["Variables", "Pancakes", "Sunlight"], difficulty="easy")
-        q2 = AssessmentQuestion(question=f"Which keyword defines a function in {topic.split()[0]}?",
-                                options=["def", "function", "fn"], difficulty="medium")
-        q3 = AssessmentQuestion(question=f"What data type holds multiple values in {topic}?",
-                                options=["list/array", "single", "boolean"], difficulty="easy")
-        quiz = AssessmentQuiz(topic=topic, level=level, questions=[q1, q2, q3])
-        return quiz
+        return build_assessment_fallback(topic_clean, level)
 
 
 def score_assessment(quiz_data) -> StudentProfile:
