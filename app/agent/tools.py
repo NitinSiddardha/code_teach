@@ -98,15 +98,30 @@ def run_code_snippet(code: str, language: str = "python") -> str:
     Execute the student's code using the hosted Piston API and return the output.
     This avoids running arbitrary student code directly on the server.
     """
-    if language not in {"python", "java"}:
+    # Accept common languages; extendable
+    if language not in {"python", "java", "cpp"}:
         return "Language not supported yet."
 
     try:
-        payload = {
-            "language": language,
-            "version": "3.10.0" if language == "python" else "17.0.9",
-            "files": [{"name": "main.py" if language == "python" else "Main.java", "content": code}],
-        }
+        # Map to piston-supported filenames and versions
+        if language == "python":
+            payload = {
+                "language": "python",
+                "version": "3.10.0",
+                "files": [{"name": "main.py", "content": code}],
+            }
+        elif language == "java":
+            payload = {
+                "language": "java",
+                "version": "17.0.9",
+                "files": [{"name": "Main.java", "content": code}],
+            }
+        elif language == "cpp":
+            payload = {
+                "language": "cpp",
+                "version": "17.0.0",
+                "files": [{"name": "main.cpp", "content": code}],
+            }
         response = requests.post("https://emkc.org/api/v2/piston/execute", json=payload, timeout=15)
         response.raise_for_status()
         data = response.json()

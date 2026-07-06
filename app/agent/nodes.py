@@ -170,7 +170,60 @@ def evaluate_code(state: TeachState) -> dict:
     """
     try:
         llm = get_llm_for_level(state["level"])
-        language = "java" if "java" in state["topic"].lower() else "python"
+        # Determine target language from topic (supports cpp, java, python)
+        topic_text = state["topic"] or ""
+        t = topic_text.lower()
+        if "c++" in t or "cpp" in t:
+            language = "cpp"
+        elif "java" in t:
+            language = "java"
+        else:
+            language = "python"
+
+        # Simple heuristic to detect submitted code language; if it doesn't match
+        # the expected language, ask the student to resubmit in the target language.
+        submitted = (state.get("student_code") or "").strip()
+        def detect_lang(code: str) -> str:
+            c = code.strip()
+            if c.startswith("#include") or "std::" in c or "cout" in c or "int main" in c:
+                return "cpp"
+            if c.startswith("public static") or "System.out" in c or "class " in c and "{" in c:
+                return "java"
+            if c.startswith("def ") or c.startswith("import ") or "print(" in c:
+                return "python"
+            return "unknown"
+
+        detected = detect_lang(submitted)
+        if detected != "unknown" and detected != language:
+            # Build a gentle instructive response asking for the correct language
+            hint = None
+            if language == "cpp":
+                hint = "Please submit your solution in C++ (e.g., include <iostream> and use int main)."
+            elif language == "java":
+                hint = "Please submit your solution in Java (e.g., a class with a main method)."
+            else:
+                hint = "Please submit your solution in Python."
+
+            response = build_fallback_response(
+                state,
+                message=f"It looks like you submitted code in a different language. {hint}",
+                task=state["last_response"].task if state.get("last_response") else None,
+                concept=state["last_response"].concept_tested if state.get("last_response") else None,
+            )
+            updated_profile = state["profile"]
+            # Do not mark as incorrect; prompt for correct language instead
+            return {
+                "last_response": response,
+                "profile": updated_profile,
+                "level_suggestion": response.level_suggestion,
+                "prereq_gap_detected": response.prerequisite_gap,
+                "student_code": state.get("student_code"),
+                "conversation_history": [
+                    HumanMessage(content=state.get("student_code") or ""),
+                    AIMessage(content=response.message)
+                ]
+            }
+
         execution_result = run_code_snippet.func(state["student_code"], language)
         chain = FEEDBACK_PROMPT | llm | teacher_response_parser
         concept = state["last_response"].concept_tested or "general"
