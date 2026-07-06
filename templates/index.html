@@ -3,44 +3,141 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>code.teach</title>
+    <title>code.teach — Learn by Coding</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <h1>code.teach</h1>
-        <p>Hands-on coding tutoring, delivered in the browser.</p>
-        <form id="setup-form" class="card">
-          <label>Topic</label>
-          <input id="topic" value="Python Variables" />
-          <label>Level</label>
-          <select id="level">
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
-          <button type="submit">Start session</button>
-        </form>
-        <div class="card">
-          <h3>Signals</h3>
-          <div class="signal-grid">
-            <button data-signal="too_hard">Too Hard</button>
-            <button data-signal="too_easy">Too Easy</button>
-            <button data-signal="lost_concept">Lost</button>
-            <button data-signal="more_practice">Practice</button>
+    <div id="app" class="app">
+      <!-- Screen 1: Landing Page -->
+      <div id="screen-landing" class="screen active">
+        <div class="landing-hero">
+          <h1>code.teach</h1>
+          <p class="tagline">Learn to code through hands-on tasks — not lectures.</p>
+          <button id="btn-start-onboarding" class="btn btn-primary btn-large">
+            Get Started
+          </button>
+        </div>
+      </div>
+
+      <!-- Screen 2: Topic & Level Selection -->
+      <div id="screen-select" class="screen">
+        <div class="card-container">
+          <h2>What do you want to learn?</h2>
+          
+          <div class="form-group">
+            <label for="topic">Choose a topic:</label>
+            <select id="topic">
+              <option value="">-- Select a topic --</option>
+              <option value="Python Variables">Python Variables</option>
+              <option value="Python Functions">Python Functions</option>
+              <option value="Python Loops">Python Loops</option>
+              <option value="Python Dictionaries">Python Dictionaries</option>
+              <option value="Python Lists">Python Lists</option>
+              <option value="Java Variables">Java Variables</option>
+              <option value="Java Functions">Java Functions</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Select your level:</label>
+            <div class="level-selector">
+              <button class="level-btn" data-level="beginner">
+                <span class="level-badge">Beginner</span>
+                <span class="level-desc">Just starting out</span>
+              </button>
+              <button class="level-btn" data-level="intermediate">
+                <span class="level-badge">Intermediate</span>
+                <span class="level-desc">Some experience</span>
+              </button>
+              <button class="level-btn" data-level="advanced">
+                <span class="level-badge">Advanced</span>
+                <span class="level-desc">Know the basics</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="btn-back-landing" class="btn btn-secondary">Back</button>
+            <button id="btn-next-assessment" class="btn btn-primary">Next: Quick Assessment</button>
           </div>
         </div>
-      </aside>
+      </div>
 
-      <main class="main-panel">
-        <div id="messages" class="messages"></div>
-        <div class="editor-card">
-          <textarea id="code" spellcheck="false">print('Hello from code.teach')
-</textarea>
-          <button id="submit-btn">Submit code</button>
+      <!-- Screen 3: Quick Assessment -->
+      <div id="screen-assessment" class="screen">
+        <div class="card-container">
+          <h2>Quick assessment</h2>
+          <p class="subtitle">Let's see what you already know (1-2 minutes)</p>
+          
+          <div id="assessment-questions" class="assessment-questions">
+            <!-- Populated dynamically -->
+          </div>
+
+          <div class="form-actions">
+            <button id="btn-back-select" class="btn btn-secondary">Back</button>
+            <button id="btn-start-session" class="btn btn-primary">Start Learning</button>
+          </div>
         </div>
-      </main>
+      </div>
+
+      <!-- Screen 4: Learning Session -->
+      <div id="screen-session" class="screen">
+        <div class="session-header">
+          <div class="session-info">
+            <div class="topic-tag" id="topic-tag">Python Variables</div>
+            <div class="level-tag" id="level-tag">Beginner</div>
+          </div>
+          <div class="session-progress">
+            <span id="task-counter">Task 1 of 5</span>
+          </div>
+          <button id="btn-end-session" class="btn btn-outline btn-small">End session</button>
+        </div>
+
+        <div class="session-content">
+          <!-- Topic explanation -->
+          <div id="topic-explanation" class="explanation-box">
+            <!-- Populated with topic context -->
+          </div>
+
+          <!-- Messages -->
+          <div id="messages" class="messages"></div>
+
+          <!-- Code editor -->
+          <div class="editor-section">
+            <label>Your solution:</label>
+            <textarea id="code" class="code-editor" spellcheck="false" placeholder="Write your code here..."></textarea>
+            <button id="submit-btn" class="btn btn-primary btn-block">Submit Code</button>
+          </div>
+
+          <!-- Signals -->
+          <div class="signals-section">
+            <p class="signals-label">Need help?</p>
+            <div class="signal-buttons">
+              <button class="signal-btn" data-signal="too_hard">Too Hard</button>
+              <button class="signal-btn" data-signal="too_easy">Too Easy</button>
+              <button class="signal-btn" data-signal="lost_concept">Lost</button>
+              <button class="signal-btn" data-signal="more_practice">More Practice</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 5: Session Summary -->
+      <div id="screen-summary" class="screen">
+        <div class="card-container">
+          <div class="summary-header">
+            <h2>Session complete!</h2>
+          </div>
+          
+          <div id="summary-content" class="summary-content">
+            <!-- Populated with session results -->
+          </div>
+
+          <div class="form-actions">
+            <button id="btn-new-session" class="btn btn-primary">Start New Session</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="/static/app.js"></script>
