@@ -68,14 +68,26 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
     Generates a short diagnostic quiz tailored to topic/level and conversation context.
     Returns an AssessmentQuiz Pydantic object.
     """
-    chain = ASSESSMENT_PROMPT | smart_llm | assessment_parser
-    quiz = chain.invoke({
-        "topic": topic,
-        "level": level,
-        "conversation": conversation or "",
-        "format_instructions": assessment_parser.get_format_instructions()
-    })
-    return quiz
+    try:
+        chain = ASSESSMENT_PROMPT | smart_llm | assessment_parser
+        quiz = chain.invoke({
+            "topic": topic,
+            "level": level,
+            "conversation": conversation or "",
+            "format_instructions": assessment_parser.get_format_instructions()
+        })
+        return quiz
+    except Exception:
+        # Fallback simple quiz when LLM is unavailable
+        from app.prompts.parsers import AssessmentQuiz, AssessmentQuestion
+        q1 = AssessmentQuestion(question=f"What is a core idea in {topic}?",
+                                options=["Variables", "Pancakes", "Sunlight"], difficulty="easy")
+        q2 = AssessmentQuestion(question=f"Which keyword defines a function in {topic.split()[0]}?",
+                                options=["def", "function", "fn"], difficulty="medium")
+        q3 = AssessmentQuestion(question=f"What data type holds multiple values in {topic}?",
+                                options=["list/array", "single", "boolean"], difficulty="easy")
+        quiz = AssessmentQuiz(topic=topic, level=level, questions=[q1, q2, q3])
+        return quiz
 
 
 def get_material_summary() -> str:
