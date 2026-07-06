@@ -76,23 +76,65 @@ def build_fallback_plan(topic: str, level: str) -> LessonPlan:
     )
 
 
-def fallback_task_for_topic(topic: str) -> str:
+def fallback_task_for_topic(topic: str, concept: str | None = None) -> str:
     topic_text = (topic or "").lower()
+    is_variable = concept and "variable" in concept.lower()
+    is_function = concept and "function" in concept.lower()
+
     if "c++" in topic_text or "cpp" in topic_text:
-        return "Write a C++ function named square that returns the square of an integer."
+        if is_variable:
+            return "In C++, declare an integer variable named count with value 10 and print it."
+        if is_function:
+            return "In C++, write a function named square that returns the square of an integer."
+        return "In C++, declare an integer variable named count with value 10 and print it."
     if "java" in topic_text:
-        return "Write a Java method named square that returns the square of an integer."
+        if is_variable:
+            return "In Java, declare an integer variable named count with value 10 inside a main method."
+        if is_function:
+            return "In Java, write a method named square that returns the square of an integer."
+        return "In Java, declare an integer variable named count with value 10 inside a main method."
     if "python" in topic_text:
-        return "Write a Python function named square that returns the square of a number."
+        if is_variable:
+            return "In Python, create a variable named count and assign it the value 10."
+        if is_function:
+            return "In Python, write a function named square that returns the square of a number."
+        return "In Python, create a variable named count and assign it the value 10."
+    if is_variable:
+        return "Declare a variable named count and set it to 10."
+    if is_function:
+        return "Write a function named square that returns the square of a number."
     return "Write a small function that returns the square of a number."
 
 
+def get_starter_code(language: str, concept: str | None = None) -> str:
+    if language == "cpp":
+        if concept and "variable" in concept.lower():
+            return "#include <iostream>\nint main() {\n    int count = 10;\n    std::cout << count << std::endl;\n    return 0;\n}\n"
+        return "#include <iostream>\nint square(int x) {\n    return x * x;\n}\nint main() {\n    std::cout << square(5) << std::endl;\n    return 0;\n}\n"
+    if language == "java":
+        if concept and "variable" in concept.lower():
+            return "public class Main {\n    public static void main(String[] args) {\n        int count = 10;\n        System.out.println(count);\n    }\n}\n"
+        return "public class Main {\n    public static int square(int x) {\n        return x * x;\n    }\n    public static void main(String[] args) {\n        System.out.println(square(5));\n    }\n}\n"
+    if language == "python":
+        if concept and "variable" in concept.lower():
+            return "count = 10\nprint(count)\n"
+        return "def square(x):\n    return x * x\n\nprint(square(5))\n"
+    return "def greet(name):\n    # add your code here\n    pass\n"
+
+
 def build_fallback_response(state: TeachState, *, message: str, task: str | None = None, starter_code: str | None = None, concept: str | None = None) -> TeacherResponse:
+    topic_text = (state.get("topic") or "").lower()
+    language = "python"
+    if "c++" in topic_text or "cpp" in topic_text:
+        language = "cpp"
+    elif "java" in topic_text:
+        language = "java"
+
     return TeacherResponse(
         mode="task",
         message=message,
-        task=task or "Write a small function that prints a greeting.",
-        starter_code=starter_code or "def greet(name):\n    # add your code here\n    pass\n",
+        task=task or "Write a small task that practices the concept.",
+        starter_code=starter_code or get_starter_code(language, concept),
         rich_feedback=RichFeedback(
             what_worked="You are making progress.",
             what_to_fix="Try completing the missing implementation.",
@@ -138,7 +180,8 @@ def retrieve_context(state: TeachState) -> dict:
     
     return {
         "retrieved_material": material,
-        "retrieved_tasks": [task_history]
+        "retrieved_tasks": [task_history],
+        "current_concept": concept
     }
 
 
@@ -151,20 +194,23 @@ def give_task(state: TeachState) -> dict:
     try:
         llm = get_llm_for_level(state["level"])
         chain = TEACH_PROMPT | llm | teacher_response_parser
+        concept = state.get("current_concept") or "general"
         response = chain.invoke({
             "level": state["level"],
             "topic": state["topic"],
+            "concept": concept,
             "student_profile": json.dumps(state["profile"].model_dump()),
             "retrieved_context": state["retrieved_material"],
             "task_history": "\n".join(state["retrieved_tasks"] or ["No prior tasks yet."]),
             "format_instructions": teacher_response_parser.get_format_instructions(),
         })
     except Exception:
+        concept = state.get("current_concept") or "variables"
         response = build_fallback_response(
             state,
             message="Let’s build something small and concrete.",
-            task=fallback_task_for_topic(state["topic"]),
-            concept="functions",
+            task=fallback_task_for_topic(state["topic"], concept),
+            concept=concept,
         )
     
     return {
@@ -284,13 +330,28 @@ def evaluate_code(state: TeachState) -> dict:
     # If execution produced no error we consider it correct, otherwise fall back to LLM judgment.
     is_correct = (not has_error) or (response.mode == "correct")
     updated_profile.update_after_task(concept, is_correct)
-    
+
+    current_module_idx = state.get("current_module_idx", 0)
+    current_task_idx = state.get("current_task_idx", 0)
+    lesson_plan = state.get("lesson_plan")
+    next_module_idx = current_module_idx
+    next_task_idx = current_task_idx
+    if is_correct and lesson_plan and lesson_plan.modules:
+        module = lesson_plan.modules[current_module_idx]
+        if current_task_idx + 1 >= module.task_count:
+            next_module_idx = min(current_module_idx + 1, len(lesson_plan.modules) - 1)
+            next_task_idx = 0
+        else:
+            next_task_idx = current_task_idx + 1
+
     return {
         "last_response": response,
         "profile": updated_profile,
         "level_suggestion": response.level_suggestion,
         "prereq_gap_detected": response.prerequisite_gap,
         "student_code": None,
+        "current_module_idx": next_module_idx,
+        "current_task_idx": next_task_idx,
         "conversation_history": [
             HumanMessage(content=state["student_code"]),
             AIMessage(content=response.message)

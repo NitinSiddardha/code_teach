@@ -26,7 +26,11 @@ Docs to read:
 from config import CHUNK_SIZE, CHUNK_OVERLAP
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_core.documents import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+try:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+except ImportError:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 text_splitter = RecursiveCharacterTextSplitter(

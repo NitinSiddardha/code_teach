@@ -37,22 +37,25 @@ TEACH_PROMPT = ChatPromptTemplate.from_messages([
 Rules:
 1. Message: 1-2 sentences max.
 2. Task: ONE clear coding exercise, 1 sentence.
-3. Never explain concepts unless asked.
-4. Scaffold based on level:
+3. Do not invent new concepts; focus on the requested concept.
+4. If the concept is a variable topic, do not ask for a function unless the topic is functions.
+5. If the topic mentions a programming language, use that language in the task and starter code.
+6. Scaffold based on level:
    - Beginner: Provide starter code and clear example.
    - Intermediate: Starter code with blanks to fill.
    - Advanced: Just the task name, student figures out structure.
-5. NO preamble or commentary. Just task.
+7. NO preamble or commentary. Just task.
 
 {format_instructions}"""),
     ("human", """Topic: {topic}
+Concept: {concept}
 Level: {level}
 Student Profile: {student_profile}
 
 Context:
 {retrieved_context}
 
-Provide ONE task for the student to complete.""")
+Provide ONE task for the student to complete that practices the requested concept.""")
 ])
 
 
@@ -63,13 +66,15 @@ FEEDBACK_PROMPT = ChatPromptTemplate.from_messages([
 
 Rules:
 1. Execution result matters most. If it runs and works, the code is good.
-2. If execution_result shows success output, mark as 'correct'.
-3. If there's an error, point out the EXACT line and ONE fix.
-4. Message: max 2 sentences.
-5. NO lengthy explanations. Direct feedback.
+2. If execution_result shows success output, mark it as correct.
+3. If there's an error, point out the EXACT line or reason and ONE fix.
+4. If the task is about a specific concept, mention whether the code solved that concept.
+5. Message: max 2 sentences.
+6. NO lengthy explanations. Direct feedback.
 
 {format_instructions}"""),
     ("human", """Task: {task}
+Concept: {expected_concept}
 Code:
 {student_code}
 

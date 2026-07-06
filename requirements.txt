@@ -15,5 +15,6 @@ flask
 gunicorn
 sqlalchemy
 psycopg2-binary
+langchain_text_splitters
 requests
 
