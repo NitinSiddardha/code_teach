@@ -89,7 +89,26 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
             "conversation": conversation or "",
             "format_instructions": assessment_parser.get_format_instructions()
         })
-        return quiz
+        # Post-process quiz to ensure topic and difficulty align with inputs
+        try:
+            # force the canonical topic
+            quiz.topic = topic_clean
+            # Map level to difficulty
+            level_map = {"beginner": "easy", "intermediate": "medium", "advanced": "hard"}
+            target_diff = level_map.get(level, "medium")
+            for q in quiz.questions:
+                # Ensure difficulty is set appropriately
+                if not getattr(q, "difficulty", None):
+                    q.difficulty = target_diff
+                # If the question mentions another language, replace it with the cleaned topic's language
+                q_text = q.question
+                if "python" in q_text.lower() and "c++" in topic_clean.lower():
+                    q.question = q_text.replace("Python", "C++").replace("python", "C++")
+                if "python" in q_text.lower() and "java" in topic_clean.lower():
+                    q.question = q_text.replace("Python", "Java").replace("python", "Java")
+            return quiz
+        except Exception:
+            return quiz
     except Exception:
         # Fallback simple quiz when LLM is unavailable
         from app.prompts.parsers import AssessmentQuiz, AssessmentQuestion

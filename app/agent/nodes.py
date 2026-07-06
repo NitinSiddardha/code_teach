@@ -187,10 +187,24 @@ def evaluate_code(state: TeachState) -> dict:
             c = code.strip()
             if c.startswith("#include") or "std::" in c or "cout" in c or "int main" in c:
                 return "cpp"
-            if c.startswith("public static") or "System.out" in c or "class " in c and "{" in c:
+            if c.startswith("public static") or "System.out" in c or ("class " in c and "{" in c):
                 return "java"
             if c.startswith("def ") or c.startswith("import ") or "print(" in c:
                 return "python"
+            if "console.log(" in c or c.startswith("function ") or c.strip().endswith(";") and "=>" in c:
+                return "javascript"
+            if c.strip().startswith("package main") or "func main" in c:
+                return "go"
+            if c.strip().startswith("<?php") or c.strip().startswith("echo "):
+                return "php"
+            if c.strip().startswith("using System") or "Console.WriteLine" in c:
+                return "csharp"
+            if c.strip().startswith("#") and "include" in c and ("<stdio.h>" in c or "printf(" in c):
+                return "c"
+            if c.strip().startswith("def ") and c.strip().endswith("end"):
+                return "ruby"
+            if ":" in c and ("=>" in c or "interface" in c):
+                return "typescript"
             return "unknown"
 
         detected = detect_lang(submitted)
