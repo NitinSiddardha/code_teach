@@ -141,6 +141,15 @@ lesson_plan_parser      = PydanticOutputParser(pydantic_object=LessonPlan)
 session_summary_parser  = PydanticOutputParser(pydantic_object=SessionSummary)
 
 # ── Assessment Models ───────────────────────────────────────────────────────
+class TopicMetadata(BaseModel):
+    language: Optional[str] = Field(default=None, description="Detected programming language if present")
+    concept: Optional[str] = Field(default=None, description="Detected concept or topic focus")
+
+    model_config = {
+        "extra": "ignore"
+    }
+
+
 class AssessmentQuestion(BaseModel):
     question: str
     options: List[str]
@@ -163,5 +172,6 @@ class AssessmentQuiz(BaseModel):
     }
 
 
+topic_metadata_parser = PydanticOutputParser(pydantic_object=TopicMetadata)
 assessment_parser = PydanticOutputParser(pydantic_object=AssessmentQuiz)
 

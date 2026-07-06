@@ -45,7 +45,7 @@ from app.agent.nodes import (
     route_decision,
     end_session,
 )
-from app.chains.planner_chain import score_assessment
+from app.chains.planner_chain import score_assessment, detect_topic_metadata
 print("Debug: teacher_agent.py - Done importing nodes")
 
 from langgraph.graph import StateGraph, END
@@ -108,7 +108,10 @@ def start_session(topic: str, level: str, assessment: list[dict] | None = None, 
     Returns the first task.
     """
     profile = score_assessment(assessment) if assessment else None
+    metadata = detect_topic_metadata(topic)
     state = initial_state(topic, level, profile=profile)
+    state["topic_language"] = metadata.language
+    state["topic_concept"] = metadata.concept
     config = {"configurable": {"thread_id": thread_id}}
     result = teaching_graph.invoke(state, config)
     return result["last_response"]

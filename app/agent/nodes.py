@@ -76,38 +76,30 @@ def build_fallback_plan(topic: str, level: str) -> LessonPlan:
     )
 
 
-def fallback_task_for_topic(topic: str, concept: str | None = None) -> str:
-    topic_text = (topic or "").lower()
+def fallback_task_for_topic(topic_language: str | None = None, concept: str | None = None) -> str:
+    language = (topic_language or "").lower()
     is_variable = concept and "variable" in concept.lower()
     is_function = concept and "function" in concept.lower()
+    concept_text = concept or "the requested concept"
 
-    if "c++" in topic_text or "cpp" in topic_text:
-        if is_variable:
-            return "In C++, declare an integer variable named count with value 10 and print it."
-        if is_function:
-            return "In C++, write a function named square that returns the square of an integer."
-        return "In C++, declare an integer variable named count with value 10 and print it."
-    if "java" in topic_text:
-        if is_variable:
-            return "In Java, declare an integer variable named count with value 10 inside a main method."
-        if is_function:
-            return "In Java, write a method named square that returns the square of an integer."
-        return "In Java, declare an integer variable named count with value 10 inside a main method."
-    if "python" in topic_text:
-        if is_variable:
-            return "In Python, create a variable named count and assign it the value 10."
-        if is_function:
-            return "In Python, write a function named square that returns the square of a number."
-        return "In Python, create a variable named count and assign it the value 10."
+    if language == "c++" or language == "cpp":
+        base = "In C++,"
+    elif language == "java":
+        base = "In Java,"
+    elif language == "python":
+        base = "In Python,"
+    else:
+        base = ""
+
     if is_variable:
-        return "Declare a variable named count and set it to 10."
+        return f"{base} declare a variable named count and assign it the value 10."
     if is_function:
-        return "Write a function named square that returns the square of a number."
-    return "Write a small function that returns the square of a number."
+        return f"{base} write a function named square that returns the square of a number."
+    return f"{base} write a small code example that demonstrates {concept_text}.".strip()
 
 
 def get_starter_code(language: str, concept: str | None = None) -> str:
-    if language == "cpp":
+    if language in {"c++", "cpp"}:
         if concept and "variable" in concept.lower():
             return "#include <iostream>\nint main() {\n    int count = 10;\n    std::cout << count << std::endl;\n    return 0;\n}\n"
         return "#include <iostream>\nint square(int x) {\n    return x * x;\n}\nint main() {\n    std::cout << square(5) << std::endl;\n    return 0;\n}\n"
@@ -123,13 +115,9 @@ def get_starter_code(language: str, concept: str | None = None) -> str:
 
 
 def build_fallback_response(state: TeachState, *, message: str, task: str | None = None, starter_code: str | None = None, concept: str | None = None) -> TeacherResponse:
-    topic_text = (state.get("topic") or "").lower()
-    language = "python"
-    if "c++" in topic_text or "cpp" in topic_text:
+    language = (state.get("topic_language") or "python").lower()
+    if language == "c++":
         language = "cpp"
-    elif "java" in topic_text:
-        language = "java"
-
     return TeacherResponse(
         mode="task",
         message=message,
@@ -142,7 +130,7 @@ def build_fallback_response(state: TeachState, *, message: str, task: str | None
             pattern_name=None,
             code_smell=None,
         ),
-        concept_tested=concept or "variables",
+        concept_tested=concept or (state.get("topic_concept") or "general"),
         prerequisite_gap=None,
         level_suggestion=None,
     )
@@ -156,7 +144,14 @@ def plan_lesson(state: TeachState) -> dict:
     """
     try:
         profile_data = state["profile"].model_dump() if state.get("profile") else None
-        plan = run_planner(state["topic"], state["level"], student_profile=profile_data)
+        topic_meta = None
+        if state.get("topic_language") or state.get("topic_concept"):
+            from app.prompts.parsers import TopicMetadata
+            topic_meta = TopicMetadata(
+                language=state.get("topic_language"),
+                concept=state.get("topic_concept"),
+            )
+        plan = run_planner(state["topic"], state["level"], student_profile=profile_data, topic_meta=topic_meta)
     except Exception:
         plan = build_fallback_plan(state["topic"], state["level"])
     return {"lesson_plan": plan}
@@ -198,6 +193,7 @@ def give_task(state: TeachState) -> dict:
         response = chain.invoke({
             "level": state["level"],
             "topic": state["topic"],
+            "language": state.get("topic_language") or "",
             "concept": concept,
             "student_profile": json.dumps(state["profile"].model_dump()),
             "retrieved_context": state["retrieved_material"],
@@ -205,11 +201,11 @@ def give_task(state: TeachState) -> dict:
             "format_instructions": teacher_response_parser.get_format_instructions(),
         })
     except Exception:
-        concept = state.get("current_concept") or "variables"
+        concept = state.get("current_concept") or state.get("topic_concept") or "general"
         response = build_fallback_response(
             state,
             message="Let’s build something small and concrete.",
-            task=fallback_task_for_topic(state["topic"], concept),
+            task=fallback_task_for_topic(state.get("topic_language"), concept),
             concept=concept,
         )
     
@@ -228,15 +224,9 @@ def evaluate_code(state: TeachState) -> dict:
     """
     try:
         llm = get_llm_for_level(state["level"])
-        # Determine target language from topic (supports cpp, java, python)
-        topic_text = state["topic"] or ""
-        t = topic_text.lower()
-        if "c++" in t or "cpp" in t:
+        language = (state.get("topic_language") or "python").lower()
+        if language == "c++":
             language = "cpp"
-        elif "java" in t:
-            language = "java"
-        else:
-            language = "python"
 
         # Simple heuristic to detect submitted code language; if it doesn't match
         # the expected language, ask the student to resubmit in the target language.
@@ -269,18 +259,20 @@ def evaluate_code(state: TeachState) -> dict:
         if detected != "unknown" and detected != language:
             # Build a gentle instructive response asking for the correct language
             hint = None
-            if language == "cpp":
+            if language in {"cpp", "c++"}:
                 hint = "Please submit your solution in C++ (e.g., include <iostream> and use int main)."
             elif language == "java":
                 hint = "Please submit your solution in Java (e.g., a class with a main method)."
-            else:
+            elif language == "python":
                 hint = "Please submit your solution in Python."
+            else:
+                hint = f"Please submit your solution in {language.title()} if possible."
 
             response = build_fallback_response(
                 state,
                 message=f"It looks like you submitted code in a different language. {hint}",
                 task=state["last_response"].task if state.get("last_response") else None,
-                concept=state["last_response"].concept_tested if state.get("last_response") else None,
+                concept=state["last_response"].concept_tested if state.get("last_response") else state.get("topic_concept"),
             )
             updated_profile = state["profile"]
             # Do not mark as incorrect; prompt for correct language instead

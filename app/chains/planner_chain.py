@@ -34,11 +34,13 @@ Docs to read:
 import json
 
 from app.models.llm import smart_llm
-from app.prompts.templates import PLANNER_PROMPT
+from app.prompts.templates import PLANNER_PROMPT, TOPIC_ANALYSIS_PROMPT
 from app.prompts.parsers import (
     LessonPlan,
     lesson_plan_parser,
     assessment_parser,
+    topic_metadata_parser,
+    TopicMetadata,
     StudentProfile,
     AssessmentQuiz,
     AssessmentQuestion,
@@ -54,7 +56,23 @@ def build_planner_chain():
     return PLANNER_PROMPT | smart_llm | lesson_plan_parser
 
 
-def run_planner(topic: str, level: str, previous_session=None, student_profile: dict | None = None) -> LessonPlan:
+def detect_topic_metadata(topic: str) -> TopicMetadata:
+    """Use an LLM prompt to detect programming language and concept from raw topic text."""
+    text = (topic or "").strip() or "programming basics"
+    try:
+        chain = TOPIC_ANALYSIS_PROMPT | smart_llm | topic_metadata_parser
+        metadata = chain.invoke({
+            "topic": text,
+            "format_instructions": topic_metadata_parser.get_format_instructions()
+        })
+        if not metadata.concept:
+            metadata.concept = text
+        return metadata
+    except Exception:
+        return TopicMetadata(language=None, concept=text)
+
+
+def run_planner(topic: str, level: str, previous_session=None, student_profile: dict | None = None, topic_meta: TopicMetadata | None = None) -> LessonPlan:
     """
     Runs the planner chain to generate a lesson plan.
     Called once at the start of each session.
@@ -62,10 +80,15 @@ def run_planner(topic: str, level: str, previous_session=None, student_profile: 
     material = get_material_summary() or "No material uploaded"
     profile_text = json.dumps(student_profile or {})
     
+    if topic_meta is None:
+        topic_meta = detect_topic_metadata(topic)
+
     chain = build_planner_chain()
     plan = chain.invoke({
         "topic": topic,
         "level": level,
+        "language": topic_meta.language or "",
+        "concept": topic_meta.concept or topic,
         "material": material,
         "previous_session": str(previous_session) if previous_session else "First session",
         "student_profile": profile_text,
@@ -74,85 +97,46 @@ def run_planner(topic: str, level: str, previous_session=None, student_profile: 
     return plan
 
 
-def build_assessment_fallback(topic_clean: str, level: str) -> AssessmentQuiz:
-    """Build a topic-aware fallback assessment when the LLM output is missing or invalid."""
-    lower = topic_clean.lower()
-    if "c++" in lower or "cpp" in lower:
-        q1 = AssessmentQuestion(
-            question="In C++, which type is best for storing whole numbers?",
-            options=["int", "string", "double", "bool"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q2 = AssessmentQuestion(
-            question="How do you declare a variable named count with value 10 in C++?",
-            options=["int count = 10;", "count := 10", "let count = 10", "count = 10"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q3 = AssessmentQuestion(
-            question="Which symbol ends a statement in C++?",
-            options=[";", ".", ",", ":"],
-            difficulty="easy",
-            correct_option=0,
-        )
-    elif "java" in lower:
-        q1 = AssessmentQuestion(
-            question="In Java, which keyword declares an integer variable?",
-            options=["int", "var", "let", "string"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q2 = AssessmentQuestion(
-            question="Which symbol ends a Java statement?",
-            options=[";", ".", ",", ":"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q3 = AssessmentQuestion(
-            question="What is the default value of an uninitialized int field in a Java class?",
-            options=["0", "null", "undefined", "1"],
-            difficulty="medium",
-            correct_option=0,
-        )
-    elif "python" in lower:
-        q1 = AssessmentQuestion(
-            question="In Python, how do you create a variable named x with value 5?",
-            options=["x = 5", "int x = 5", "let x = 5", "x := 5"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q2 = AssessmentQuestion(
-            question="Which type in Python can hold multiple values?",
-            options=["list", "int", "float", "bool"],
-            difficulty="easy",
-            correct_option=0,
-        )
-        q3 = AssessmentQuestion(
-            question="What is a variable in Python?",
-            options=["A container for storing a value", "A function", "A loop", "A comment"],
-            difficulty="easy",
-            correct_option=0,
-        )
-    else:
-        q1 = AssessmentQuestion(
-            question=f"What is most important to understand about {topic_clean}?",
-            options=["The core concept", "The weather", "The menu", "The furniture"],
-            difficulty="medium",
-            correct_option=0,
-        )
-        q2 = AssessmentQuestion(
-            question=f"Which of these is most closely related to {topic_clean}?",
-            options=["The topic itself", "A random example", "A homework assignment", "A travel plan"],
-            difficulty="medium",
-            correct_option=0,
-        )
-        q3 = AssessmentQuestion(
-            question=f"Which answer best shows understanding of {topic_clean}?",
-            options=["A correct definition", "A wrong fact", "A joke", "A song"],
-            difficulty="medium",
-            correct_option=0,
-        )
+def build_assessment_fallback(topic_clean: str, level: str, topic_meta: TopicMetadata | None = None) -> AssessmentQuiz:
+    """Build a generic fallback assessment when the LLM output is missing or invalid."""
+    language = (topic_meta.language or "").strip()
+    concept = (topic_meta.concept or topic_clean).strip()
+    base_prefix = f"In {language}, " if language else ""
+    question_text = concept or "the requested topic"
+
+    q1 = AssessmentQuestion(
+        question=f"{base_prefix}what is the main purpose of {question_text}?",
+        options=[
+            f"To practice {question_text}",
+            "To connect to the internet",
+            "To build a website layout",
+            "To manage a database",
+        ],
+        difficulty="easy",
+        correct_option=0,
+    )
+    q2 = AssessmentQuestion(
+        question=f"Which example best matches the concept of {question_text}?",
+        options=[
+            f"A code statement that demonstrates {question_text}",
+            "A sentence about sports",
+            "A picture of a cat",
+            "A math formula unrelated to code",
+        ],
+        difficulty="medium",
+        correct_option=0,
+    )
+    q3 = AssessmentQuestion(
+        question=f"{base_prefix}Which statement is true about {question_text}?",
+        options=[
+            f"It is a core programming concept.",
+            "It is a type of dessert.",
+            "It is a music genre.",
+            "It is a weather condition.",
+        ],
+        difficulty="medium",
+        correct_option=0,
+    )
 
     return AssessmentQuiz(topic=topic_clean, level=level, questions=[q1, q2, q3])
 
@@ -162,53 +146,36 @@ def run_assessment(topic: str, level: str, conversation: str = ""):
     Generates a short diagnostic quiz tailored to topic/level and conversation context.
     Returns an AssessmentQuiz Pydantic object.
     """
-    # Normalize topic for clarity (e.g., handle c++ / cpp variants)
-    t_raw = (topic or "").strip()
-    t_low = t_raw.lower()
-    if "c++" in t_low or "cpp" in t_low:
-        topic_clean = "C++ Variables" if "variable" in t_low else "C++"
-    elif "java" in t_low:
-        topic_clean = "Java " + ("Variables" if "variable" in t_low else "Basics")
-    elif "python" in t_low:
-        topic_clean = "Python " + ("Variables" if "variable" in t_low else "Basics")
-    else:
-        # Capitalize each word as a safe default
-        topic_clean = " ".join([w.capitalize() for w in t_raw.split()]) or topic
+    topic_meta = detect_topic_metadata(topic)
+    topic_clean = topic_meta.concept or (topic or "").strip().title()
 
     try:
         chain = ASSESSMENT_PROMPT | smart_llm | assessment_parser
         quiz = chain.invoke({
-            "topic": topic_clean,
+            "topic": topic,
+            "language": topic_meta.language or "",
+            "concept": topic_meta.concept or topic_clean,
             "level": level,
             "conversation": conversation or "",
             "format_instructions": assessment_parser.get_format_instructions()
         })
         # Post-process quiz to ensure topic and difficulty align with inputs
         try:
-            # force the canonical topic
             quiz.topic = topic_clean
-            # Map level to difficulty
             level_map = {"beginner": "easy", "intermediate": "medium", "advanced": "hard"}
             target_diff = level_map.get(level, "medium")
             for q in quiz.questions:
-                # Ensure difficulty is set appropriately
                 if not getattr(q, "difficulty", None):
                     q.difficulty = target_diff
                 if q.correct_option is None:
                     q.correct_option = 0
-                # If the question mentions another language, replace it with the cleaned topic's language
-                q_text = q.question
-                if "python" in q_text.lower() and "c++" in topic_clean.lower():
-                    q.question = q_text.replace("Python", "C++").replace("python", "C++")
-                if "python" in q_text.lower() and "java" in topic_clean.lower():
-                    q.question = q_text.replace("Python", "Java").replace("python", "Java")
             if not quiz.questions:
-                return build_assessment_fallback(topic_clean, level)
+                return build_assessment_fallback(topic_clean, level, topic_meta)
             return quiz
         except Exception:
             return quiz
     except Exception:
-        return build_assessment_fallback(topic_clean, level)
+        return build_assessment_fallback(topic_clean, level, topic_meta)
 
 
 def score_assessment(quiz_data) -> StudentProfile:

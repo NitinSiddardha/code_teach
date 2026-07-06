@@ -48,6 +48,7 @@ Rules:
 
 {format_instructions}"""),
     ("human", """Topic: {topic}
+Language: {language}
 Concept: {concept}
 Level: {level}
 Student Profile: {student_profile}
@@ -85,6 +86,24 @@ Evaluate this code.""")
 ])
 
 
+# ── TOPIC_ANALYSIS_PROMPT ─────────────────────────────────────────────────────────
+# Used by: planner_chain.py → detect_topic_metadata
+TOPIC_ANALYSIS_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """You are a topic parser. Extract the programming language and core concept from the given topic label.
+
+Rules:
+1. If the user explicitly names a language, return it.
+2. If the user gives a concept (e.g. variables, loops, classes), return that concept.
+3. If the topic is vague, return the most plausible concept and omit the language if none is explicit.
+4. Output only valid JSON with fields language and concept.
+
+{format_instructions}"""),
+    ("human", """Topic: {topic}
+
+Parse the topic into structured fields.""")
+])
+
+
 # ── PLANNER_PROMPT ────────────────────────────────────────────────────────────
 # Used by: planner_chain.py → runs ONCE at session start
 PLANNER_PROMPT = ChatPromptTemplate.from_messages([
@@ -100,6 +119,8 @@ Rules:
 {format_instructions}"""),
     ("human", """Topic: {topic}
 Level: {level}
+Language: {language}
+Concept: {concept}
 Student Profile: {student_profile}
 
 Create a lesson plan covering the fundamentals of {topic} at {level} level.
@@ -144,19 +165,21 @@ Respond to this signal.""")
 # Generates a short diagnostic quiz tailored to topic, level and recent conversation.
 ASSESSMENT_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """You are a concise quiz generator. Produce 3-5 multiple-choice questions
-    tailored to the given Topic and Level. Keep questions short and include 3-4 plausible options.
+    tailored to the given Topic, Language, and Concept. Keep questions short and include 3-4 plausible options.
 
     Rules:
     1. Return JSON matching the provided format_instructions.
     2. Difficulty should match level (beginner=easy, intermediate=medium, advanced=hard).
     3. Use recent conversation context to bias questions toward observed gaps.
-    4. If Topic mentions a programming language, reference that language in every question and use examples in that language.
+    4. If a programming language is provided, reference that language in every question and use examples in that language.
     5. Stay focused on the requested concept; do not ask unrelated generic questions.
     6. Include a hidden index field correct_option for each question.
     7. Do NOT reveal the correct_option to the student in the UI.
 
     {format_instructions}"""),
     ("human", """Topic: {topic}
+Language: {language}
+Concept: {concept}
 Level: {level}
 Conversation context: {conversation}
 

@@ -49,6 +49,8 @@ class TeachState(TypedDict):
     task_count:         int
 
     profile: Optional[StudentProfile]
+    topic_language: Optional[str]
+    topic_concept: Optional[str]
 
     # Use add_messages reducer so history accumulates
     conversation_history: Annotated[List[BaseMessage], add_messages]
@@ -78,6 +80,8 @@ def initial_state(topic: str, level: str, profile: StudentProfile | None = None)
         current_task_idx=0,
         task_count=0,
         profile=profile or StudentProfile(declared_level=level, inferred_level=level),
+        topic_language=None,
+        topic_concept=None,
         conversation_history=[],
         student_code=None,
         student_signal=None,
